@@ -13,7 +13,7 @@ pip install apify_client
 # COMMAND ----------
 
 target_accounts_df = spark.sql("select ownerUsername, max(timestamp) as Latest_date from step_proj.ig_posts group by ownerUsername order by Latest_date desc limit 30").toPandas()
-target_accounts = list(target_accounts["ownerUsername"])
+target_accounts = list(target_accounts_df["ownerUsername"])
 
 # COMMAND ----------
 
@@ -24,12 +24,7 @@ file.close()
 
 # COMMAND ----------
 
-import pickle
-file = open('step_proj.ig_account.pkl', 'rb')
-ig_accounts = pickle.load(file)
-file.close()
-
-ig_accounts
+target_accounts
 
 # COMMAND ----------
 
