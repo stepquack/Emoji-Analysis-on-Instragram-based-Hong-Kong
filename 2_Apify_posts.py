@@ -27,6 +27,31 @@ ig_accounts = list(set(ig_accounts))
 
 # COMMAND ----------
 
+import pickle
+
+# COMMAND ----------
+
+file = open('step_proj.ig_account.pkl', 'wb')
+pickle.dump(ig_accounts, file)
+file.close()
+
+# COMMAND ----------
+
+file = open('step_proj.ig_account.pkl', 'rb')
+my_object = pickle.load(file)
+file.close()
+
+# COMMAND ----------
+
+my_object
+
+# COMMAND ----------
+
+with open('ig_account.pkl', 'rb') as f:
+    
+
+# COMMAND ----------
+
 # Initialize the ApifyClient with your API token
 client = ApifyClient("apify_api_A2eOR8RxdmfQsNgH1RLmFiArVwdHSj35w39y")
 
