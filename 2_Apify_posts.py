@@ -43,10 +43,6 @@ file.close()
 
 # COMMAND ----------
 
-my_object
-
-# COMMAND ----------
-
 with open('ig_account.pkl', 'rb') as f:
     
 
