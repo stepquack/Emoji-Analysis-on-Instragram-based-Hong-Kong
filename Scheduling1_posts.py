@@ -1,14 +1,9 @@
 # Databricks notebook source
 #zooapple: apify_api_IUDxKMl1wfXqdWvfSSY4iZXu87LtTO16X1tv
 #twoplustep: apify_api_Qmp8pvmvg5E1QKLbLWg5IUwz90HQvO2xWrg4
-#1. get ig_accounts
-#2. get new post url of all ig accounts that posted after the datetime of the latest post (in ig_posts)
-#3. retrieve the post url (in ig_posts) 
-#4. 
 
 # COMMAND ----------
 
-#Installs
 pip install apify_client
 
 # COMMAND ----------
@@ -83,9 +78,14 @@ sche_post_skdf.write.mode('append') \
 
 # COMMAND ----------
 
+pd.to_datetime(sche_post_df["timestamp"])
+
+# COMMAND ----------
+
 #Filter new posts from the scraped data 
-exist_post_df = spark.sql("select distinct(url) from step_proj.ig_post_init").toPandas()
+exist_post_df = spark.sql("select distinct(url) from step_proj.ig_post").toPandas()
 new_post_df = sche_post_df[~sche_post_df["url"].isin(exist_post_df["url"])]
+
 
 # Store the target accounts in pickle
 import pickle

@@ -43,11 +43,6 @@ file.close()
 
 # COMMAND ----------
 
-with open('ig_account.pkl', 'rb') as f:
-    
-
-# COMMAND ----------
-
 # Initialize the ApifyClient with your API token
 client = ApifyClient("apify_api_A2eOR8RxdmfQsNgH1RLmFiArVwdHSj35w39y")
 

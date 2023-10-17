@@ -48,3 +48,23 @@ import pickle
 file = open('sche_accounts', 'wb')
 pickle.dump(target_accounts, file)
 file.close()
+
+# COMMAND ----------
+
+spark.sql("select url from step_proj.ig_posts").count()
+
+# COMMAND ----------
+
+clear = spark.sql("select url from step_proj.ig_posts").dropDuplicates()
+clear.count()
+clear.write.mode('overwrite') \
+         .saveAsTable("step_proj.ig_posts")
+
+# COMMAND ----------
+
+spark.sql("select id from step_proj.ig_comment").count()
+
+# COMMAND ----------
+
+clear = spark.sql("select id from step_proj.ig_comment").dropDuplicates()
+clear.count()
