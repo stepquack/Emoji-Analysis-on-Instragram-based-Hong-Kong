@@ -14,6 +14,11 @@ target_accounts = list(target_accounts_df["ownerUsername"])
 
 # COMMAND ----------
 
+spark.sql("select * from step_proj.ig_posts").toPandas()
+
+
+# COMMAND ----------
+
 # Store the target accounts in pickle
 import pickle
 file = open('sche_accounts.pkl', 'wb')
@@ -83,11 +88,10 @@ pd.to_datetime(sche_post_df["timestamp"])
 # COMMAND ----------
 
 #Filter new posts from the scraped data 
-exist_post_df = spark.sql("select distinct(url) from step_proj.ig_post").toPandas()
+exist_post_df = spark.sql("select distinct(url) from step_proj.ig_posts").toPandas()
 new_post_df = sche_post_df[~sche_post_df["url"].isin(exist_post_df["url"])]
 
-
-# Store the target accounts in pickle
+# Store the new post urls in pickle
 import pickle
 file = open('sche_posts.pkl', 'wb')
 pickle.dump(list(new_post_df["url"]), file)
