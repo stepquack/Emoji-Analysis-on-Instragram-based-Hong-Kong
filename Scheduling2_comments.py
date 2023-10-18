@@ -23,7 +23,8 @@ file.close()
 
 # COMMAND ----------
 
-exist_cm_df = spark.sql("select * from step_proj.ig_comment")
+exist_cm_count = spark.sql("select * from step_proj.ig_comment").count()
+exist_cm_count
 
 # COMMAND ----------
 
@@ -64,10 +65,15 @@ comment_skdf.write.mode('append') \
 
 # COMMAND ----------
 
-# Store schedule log
-final_cm_df = spark.sql("select * from step_proj.ig_comment")
+comment_skdf.write.mode('append') \
+         .saveAsTable("step_proj.ig_comment")
 
-log = [("comment", exist_cm_df.count(), comment_skdf.count(), final_cm_df.count())]
+# COMMAND ----------
+
+# Store schedule log
+final_cm_count = spark.sql("select * from step_proj.ig_comment").count()
+
+log = [("comment", exist_cm_count, comment_skdf.count(), final_cm_count)]
 
 schema = StructType([ \
     StructField("type",StringType(),True), \
