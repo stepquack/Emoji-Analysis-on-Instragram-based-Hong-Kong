@@ -25,10 +25,7 @@ new_post_df.printSchema()
 
 # COMMAND ----------
 
-new_post_df["hashtags"]
-
-# COMMAND ----------
-
+#Error, try filter by spark
 new_post_skdf = spark.createDataFrame(new_post_df[["id", "type", "caption", "hashtags", "url", "commentsCount", "firstComment", "latestComments", "displayUrl", "likesCount", "timestamp", "ownerFullName", "ownerUsername", "ownerId"]])
 from pyspark.sql.types import *
 new_post_skdf = new_post_skdf.withColumn("timestamp",new_post_skdf.timestamp.cast(TimestampType()))
@@ -91,3 +88,36 @@ spark.sql("select id from step_proj.ig_comment").count()
 
 clear = spark.sql("select id from step_proj.ig_comment").dropDuplicates()
 clear.count()
+
+# COMMAND ----------
+
+import pickle
+file = open('sche_posts.pkl', 'rb')
+my_object = pickle.load(file)
+file.close()
+my_object
+
+# COMMAND ----------
+
+df= spark.sql("select * from step_proj.scheduled_ig_posts").toPandas()
+new_post_df = df[df["url"].isin(my_object)]
+
+# COMMAND ----------
+
+spark.sql("select * from step_proj.ig_posts").schema
+schema = StructType([
+           StructField("id", StringType(), True),
+           StructField("type", StringType(), True),
+           StructField("caption", StringType(), True),
+           StructField("hashtags", ArrayType(StringType()), True),
+           StructField("url", StringType(), True),
+           StructField("commentsCount", LongType(), True),
+           StructField("firstComment", StringType(), True),
+           StructField("latestComments", ArrayType(StringType()), True),
+           StructField("displayUrl", StringType(), True),
+           StructField("likesCount", LongType(), True),
+           StructField("timestamp", TimestampType(), True),
+           StructField("ownerFullName", StringType(), True),
+           StructField("ownerUsername", StringType(), True),
+           StructField("ownerId", StringType(), True)
+         ])

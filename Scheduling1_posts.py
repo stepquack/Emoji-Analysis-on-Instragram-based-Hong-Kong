@@ -98,7 +98,8 @@ pickle.dump(list(new_post_df["url"]), file)
 file.close()
 
 #Convert to spark df, change datatype and store into Hive
-new_post_skdf = spark.createDataFrame(new_post_df[["id", "type", "caption", "hashtags", "url", "commentsCount", "firstComment", "latestComments", "displayUrl", "likesCount", "timestamp", "ownerFullName", "ownerUsername", "ownerId"]])
+schema = spark.sql("select * from step_proj.ig_posts").schema
+new_post_skdf = spark.createDataFrame(data=new_post_df[["id", "type", "caption", "hashtags", "url", "commentsCount", "firstComment", "latestComments", "displayUrl", "likesCount", "timestamp", "ownerFullName", "ownerUsername", "ownerId"]], schema=schema)
 from pyspark.sql.types import *
 new_post_skdf = new_post_skdf.withColumn("timestamp",new_post_skdf.timestamp.cast(TimestampType()))
 new_post_skdf.write.mode('append') \

@@ -57,7 +57,9 @@ runtime = current_timestamp()
 
 # COMMAND ----------
 
-comment_skdf = spark.createDataFrame(comment_df[["postUrl", "id", "text", "ownerUsername", "timestamp", "likesCount"]])
+schema = spark.sql("select * from step_proj.ig_comment").schema
+
+comment_skdf = spark.createDataFrame(data=comment_df[["postUrl", "id", "text", "ownerUsername", "timestamp", "likesCount"]], schema=schema)
 from pyspark.sql.types import *
 comment_skdf = comment_skdf.withColumn("timestamp",comment_skdf.timestamp.cast(TimestampType()))
 comment_skdf.write.mode('append') \
