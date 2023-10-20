@@ -20,6 +20,18 @@ import pickle
 file = open('sche_posts.pkl', 'rb')
 new_posts = pickle.load(file)
 file.close()
+new_posts
+
+# COMMAND ----------
+
+new_posts.clear()
+
+# COMMAND ----------
+
+if len(new_posts) == 0:
+    dbutils.notebook.exit("Aborting as ondition not met. Further tasks will be skipped")
+else:
+    pass
 
 # COMMAND ----------
 
@@ -48,6 +60,13 @@ for item in client.dataset(run["defaultDatasetId"]).iterate_items():
     comment_list.append(item)
 
 comment_df = pd.DataFrame(comment_list)
+
+# COMMAND ----------
+
+if len(comment_df) == 0:
+    dbutils.notebook.exit("Aborting as ondition not met. Further tasks will be skipped")
+else:
+    pass
 
 # COMMAND ----------
 
