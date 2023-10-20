@@ -7,6 +7,15 @@ exist_post_df = spark.sql("select distinct(url) from step_proj.ig_posts").toPand
 
 # COMMAND ----------
 
+#last time
+import pickle
+file = open('sche_posts.pkl', 'rb')
+my_object = pickle.load(file)
+file.close()
+my_object
+
+# COMMAND ----------
+
 import pickle
 file = open('sche_posts.pkl', 'rb')
 my_object = pickle.load(file)
@@ -31,6 +40,10 @@ new_post_skdf.write.mode('append') \
 
 # COMMAND ----------
 
+# Define schedule time
+from pyspark.sql.functions import current_timestamp
+runtime = current_timestamp()
+
 final_post_df = spark.sql("select * from step_proj.ig_posts")
 
 log = [("post", len(exist_post_df), new_post_skdf.count(), final_post_df.count())]
@@ -46,3 +59,22 @@ log_df = spark.createDataFrame(data=log, schema=schema)
 log_df = log_df.withColumn("scheduleTime", runtime)
 log_df.write.mode('append') \
          .saveAsTable("step_proj.schedule_logs")
+
+# COMMAND ----------
+
+spark.sql("select * from step_proj.ig_posts").schema
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+post_skdf = spark.sql("select * from step_proj.ig_posts")
+max_ts = post_skdf.groupBy().agg({"timestamp": "max"}).collect()[0][0]
+
+# COMMAND ----------
+
+sche_post_df = spark.sql("select * from step_proj.scheduled_ig_posts")
+sche_post_df.filter(sche_post_df.timestamp > max_ts).show(truncate=False)
+new_post_df = sche_post_df.filter(sche_post_df.timestamp > max_ts)

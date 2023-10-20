@@ -14,11 +14,6 @@ target_accounts = list(target_accounts_df["ownerUsername"])
 
 # COMMAND ----------
 
-spark.sql("select * from step_proj.ig_posts").toPandas()
-
-
-# COMMAND ----------
-
 # Store the target accounts in pickle
 import pickle
 file = open('sche_accounts.pkl', 'wb')
@@ -83,25 +78,23 @@ sche_post_skdf.write.mode('append') \
 
 # COMMAND ----------
 
-pd.to_datetime(sche_post_df["timestamp"])
+#Filter new posts from the scraped data 
+post_skdf = spark.sql("select * from step_proj.ig_posts")
+max_ts = post_skdf.groupBy().agg({"timestamp": "max"}).collect()[0][0]
+new_post_df = sche_post_skdf.filter(sche_post_skdf.timestamp > max_ts)
 
 # COMMAND ----------
-
-#Filter new posts from the scraped data 
-exist_post_df = spark.sql("select distinct(url) from step_proj.ig_posts").toPandas()
-new_post_df = sche_post_df[~sche_post_df["url"].isin(exist_post_df["url"])]
 
 # Store the new post urls in pickle
 import pickle
 file = open('sche_posts.pkl', 'wb')
-pickle.dump(list(new_post_df["url"]), file)
+new_url_list = [str(row.url) for row in new_post_df.select("url").collect()]
+pickle.dump(new_url_list, file)
 file.close()
 
-#Convert to spark df, change datatype and store into Hive
-schema = spark.sql("select * from step_proj.ig_posts").schema
-new_post_skdf = spark.createDataFrame(data=new_post_df[["id", "type", "caption", "hashtags", "url", "commentsCount", "firstComment", "latestComments", "displayUrl", "likesCount", "timestamp", "ownerFullName", "ownerUsername", "ownerId"]], schema=schema)
+#Store into Hive
 from pyspark.sql.types import *
-new_post_skdf.write.mode('append') \
+new_post_df.drop('scheduledDatetime').write.mode('append') \
          .saveAsTable("step_proj.ig_posts")
 
 
@@ -110,7 +103,7 @@ new_post_skdf.write.mode('append') \
 # Store schedule log
 final_post_df = spark.sql("select * from step_proj.ig_posts")
 
-log = [("post", len(exist_post_df), new_post_skdf.count(), final_post_df.count())]
+log = [("post", post_skdf.count(), new_post_df.count(), final_post_df.count())]
 
 schema = StructType([ \
     StructField("type",StringType(),True), \
