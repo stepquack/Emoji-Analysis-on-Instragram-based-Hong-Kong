@@ -6,8 +6,12 @@ comment_df["is_post"] = False
 
 # COMMAND ----------
 
-#
 text_df = post_df.append(comment_df, ignore_index=True)
+text_df
+
+# COMMAND ----------
+
+#
 text_skdf = spark.createDataFrame(text_df)
 text_skdf.write.mode('overwrite') \
          .saveAsTable("step_proj.raw_text")
@@ -20,6 +24,8 @@ pip install emoji
 
 import emoji #https://pypi.org/project/emoji/
 text_df['emojis'] = text_df['text'].apply(lambda row: ''.join(c for c in row if c in emoji.EMOJI_DATA))
+emoji_df = text_df[text_df["emojis"]!=""]
+emoji_df
 
 # COMMAND ----------
 

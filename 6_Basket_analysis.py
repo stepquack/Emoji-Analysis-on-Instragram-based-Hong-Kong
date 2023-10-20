@@ -59,6 +59,12 @@ onehot
 
 # COMMAND ----------
 
+onehot_skdf = spark.createDataFrame(onehot)
+onehot_skdf.write.mode('overwrite') \
+         .saveAsTable("step_proj.onehot")
+
+# COMMAND ----------
+
 support = onehot.mean()
 support = pd.DataFrame(support, columns=['support']).sort_values('support',ascending=False)
 support

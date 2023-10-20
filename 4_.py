@@ -121,3 +121,7 @@ schema = StructType([
            StructField("ownerUsername", StringType(), True),
            StructField("ownerId", StringType(), True)
          ])
+
+# COMMAND ----------
+
+spark.sql("select * from step_proj.ig_posts")
