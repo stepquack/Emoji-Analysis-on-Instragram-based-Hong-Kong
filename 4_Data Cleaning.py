@@ -9,7 +9,7 @@ comment_df["is_post"] = False
 #
 text_df = post_df.append(comment_df, ignore_index=True)
 text_skdf = spark.createDataFrame(text_df)
-text_skdf.write.mode('append') \
+text_skdf.write.mode('overwrite') \
          .saveAsTable("step_proj.raw_text")
 
 # COMMAND ----------
@@ -32,16 +32,22 @@ pip install translate
 
 # COMMAND ----------
 
+
+
+# COMMAND ----------
+
 #https://pypi.org/project/translate/
 from translate import Translator
-translator= Translator(to_lang="zh")
+translator= Translator(to_lang="zh-TW")
 def translate(c):
+    print(c)
     try: 
         return translator.translate(c)
     except:
         return c
 emoji_df["translated"] = emoji_df["text"].apply(translate)
-emoji_df
+
+
 
 # COMMAND ----------
 

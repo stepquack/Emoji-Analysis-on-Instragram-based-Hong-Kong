@@ -86,7 +86,6 @@ new_post_df = sche_post_skdf.filter(sche_post_skdf.timestamp > max_ts)
 # COMMAND ----------
 
 # Store the new post urls in pickle
-import pickle
 file = open('sche_posts.pkl', 'wb')
 new_url_list = [str(row.url) for row in new_post_df.select("url").collect()]
 pickle.dump(new_url_list, file)
