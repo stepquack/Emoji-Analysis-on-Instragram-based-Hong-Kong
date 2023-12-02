@@ -1,22 +1,20 @@
-# Databricks notebook source
-#emoproj01 (post): apify_api_A2eOR8RxdmfQsNgH1RLmFiArVwdHSj35w39y
-#emoproj02: apify_api_VVOkgO0Raw7q3vFGr8b9KI8ktvXP6m1Q29yS
-#emoproj03: apify_api_4hkcu22dSV3frvMvuF53uk6o3OGgU83LQe26
-#emoproj04: apify_api_gVXHgQ6zxHw5Lgfy1ZCIVefTSEiyX92dqhFJ
+# PART 2: Obtain the Instagram Posts for analysis
 
-# COMMAND ----------
+# STEP 1: SET UP FOR APIFY
+# Eg. TOKEN: apify_api_A2eOR8RxdmfQsNgH1RLmFiArVwdHSj35w39y
+
+# INSTALL PACKAGE---------
 
 pip install apify_client
 
-# COMMAND ----------
+# IMPORTS ----------
 
 import pandas as pd
 import numpy as np
 from apify_client import ApifyClient
 
-# COMMAND ----------
+# EXTRACT DATA: Extract Instragram accounts from storage ----------
 
-#Get ig accounts
 account_df = spark.sql("select * from step_proj.ig_account_rank").toPandas()
 all_df = account_df[(account_df["Category"] == "All Categories") & (account_df["Country"] == "Hong Kong")].sort_values(by=["Followers_num"], ascending=False).head(10)
 ig_accounts = all_df["Account_ID"].values
@@ -25,28 +23,24 @@ for i in account_df["Category"].unique():
     ig_accounts = np.append(ig_accounts, temp_df["Account_ID"].values)
 ig_accounts = list(set(ig_accounts))
 
-# COMMAND ----------
+# OPTIONAL: PICKLE for temporary storage of targeted Instragram Accounts ----------
 
 import pickle
 
-# COMMAND ----------
-
+# STORE
 file = open('step_proj.ig_account.pkl', 'wb')
 pickle.dump(ig_accounts, file)
 file.close()
 
-# COMMAND ----------
-
+# LOAD
 file = open('step_proj.ig_account.pkl', 'rb')
 my_object = pickle.load(file)
 file.close()
 
-# COMMAND ----------
+# RUNNING APIFY ----------
 
 # Initialize the ApifyClient with your API token
 client = ApifyClient("apify_api_A2eOR8RxdmfQsNgH1RLmFiArVwdHSj35w39y")
-
-# COMMAND ----------
 
 # Prepare the Actor input
 run_input = {
@@ -62,28 +56,20 @@ post_list = []
 for item in client.dataset(run["defaultDatasetId"]).iterate_items():
     post_list.append(item)
 
-#Into Dataframe
+# STORE DATA: Store into Spark datafrome----------
 post_df = pd.DataFrame(post_list)
 
-# COMMAND ----------
-
-post_df.head(5)
-
-# COMMAND ----------
-
 post_skdf = spark.createDataFrame(post_df[["id", "type", "caption", "hashtags", "url", "commentsCount", "firstComment", "latestComments", "displayUrl", "likesCount", "timestamp", "ownerFullName", "ownerUsername", "ownerId"]])
 
-# COMMAND ----------
-
-post_skdf = spark.createDataFrame(post_df[["id", "type", "caption", "hashtags", "url", "commentsCount", "firstComment", "latestComments", "displayUrl", "likesCount", "timestamp", "ownerFullName", "ownerUsername", "ownerId"]])
+# DATA TYPE CONVERTION ----------
 
 from pyspark.sql.types import *
 post_skdf = post_skdf.withColumn("timestamp",post_skdf.timestamp.cast(TimestampType()))
 
 
+# STORE DATA ----------
+
 post_skdf.write.mode('overwrite') \
          .saveAsTable("step_proj.ig_post_init")
 
-# COMMAND ----------
-
-post_skdf.printSchema()
+# END ----------

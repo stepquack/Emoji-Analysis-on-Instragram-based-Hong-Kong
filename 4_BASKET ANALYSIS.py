@@ -1,10 +1,18 @@
-# Databricks notebook source
+# BASKET ANALYSIS
+
+# EXTRACT DATA: Extract emoji and texts ----------
 emoji_uni_df = spark.sql("select * from step_proj.sentiment_analysis").toPandas()
+text_df = spark.sql("select * from step_proj.raw_text").toPandas()
+
+# Extract Emojis from texts ----------
+# Reference: https://pypi.org/project/emoji/
+
+pip install emoji
 
 # COMMAND ----------
 
-text_df = spark.sql("select * from step_proj.raw_text").toPandas()
-import emoji #https://pypi.org/project/emoji/
+import emoji
+
 text_df['emojis'] = text_df['text'].apply(lambda row: ''.join(c for c in row if c in emoji.EMOJI_DATA))
 emoji_df = text_df[text_df["emojis"]!=""]
 emoji_df
@@ -15,7 +23,7 @@ emoji_df
 emo_count = emoji_uni_df.groupby(["emojis_unique"],as_index=True)["emojis_unique"].count().sort_values(ascending =False).to_frame().rename(columns={"emojis_unique": "Count"})
 sign_emos = emo_count[emo_count["Count"]>=100].drop(index=('🏻'))
 
-# COMMAND ----------
+# BASKET ANALYSIS with itertools ---------
 
 from itertools import permutations
 rules = list(permutations(sign_emos.index, 2))
@@ -25,20 +33,12 @@ print(rules[:5])
 # COMMAND ----------
 
 emojis = emoji_uni_df[emoji_uni_df["emojis_unique"].isin(sign_emos.index)]
-
-# COMMAND ----------
-
 emojis
 
-# COMMAND ----------
+
+# One Hot Encode with TransactionEncoder ---------
 
 pip install mlxtend
-
-# COMMAND ----------
-
-pip install emoji
-
-# COMMAND ----------
 
 # Import the transaction encoder function from mlxtend
 from mlxtend.preprocessing import TransactionEncoder
@@ -57,30 +57,33 @@ onehot = pd.DataFrame(onehot, columns = encoder.columns_)
 # Print the one-hot encoded transaction dataset
 onehot
 
-# COMMAND ----------
+# STORE DATA ----------
 
 onehot_skdf = spark.createDataFrame(onehot)
 onehot_skdf.write.mode('overwrite') \
          .saveAsTable("step_proj.onehot")
 
-# COMMAND ----------
+
+
+# Display Support score ---------
 
 support = onehot.mean()
 support = pd.DataFrame(support, columns=['support']).sort_values('support',ascending=False)
 support
 
-# COMMAND ----------
+
+# Basket Analysis with apriori ---------
 
 # Import the association rules function
 from mlxtend.frequent_patterns import apriori
 from mlxtend.frequent_patterns import association_rules
 
 # Compute frequent itemsets using the Apriori algorithm
-frequent_itemsets = apriori(onehot, min_support = 0.001, 
+frequent_itemsets = apriori(onehot, min_support = 0.001,
                             max_len = 2, use_colnames = True)
 
 # Compute all association rules for frequent_itemsets
-rules = association_rules(frequent_itemsets, 
+rules = association_rules(frequent_itemsets,
                             metric = "lift")
 
 # Print association rules
@@ -91,7 +94,7 @@ rules.head()
 rules["antecedents"] = rules["antecedents"].apply(lambda x: ', '.join(list(x))).astype("unicode")
 rules["consequents"] = rules["consequents"].apply(lambda x: ', '.join(list(x))).astype("unicode")
 
-# COMMAND ----------
+# DATA TYPE CONVERSIONS ----------
 
 from pyspark.sql.types import *
 Schema = StructType([ StructField("antecedents", StringType(), True),
@@ -106,7 +109,7 @@ Schema = StructType([ StructField("antecedents", StringType(), True),
                       StructField("zhangs_metric", DoubleType(), True)
                     ])
 
-# COMMAND ----------
+# STORE DATA ----------
 
 basket_skdf = spark.createDataFrame(data = rules, schema=Schema)
 basket_skdf.write.mode('overwrite') \

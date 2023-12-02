@@ -1,18 +1,17 @@
-# Databricks notebook source
-#zooapple: apify_api_IUDxKMl1wfXqdWvfSSY4iZXu87LtTO16X1tv
-#twoplustep: apify_api_Qmp8pvmvg5E1QKLbLWg5IUwz90HQvO2xWrg4
+# STEP 1: SET UP FOR APIFY
+# Eg. TOKEN: apify_api_A2eOR8RxdmfQsNgH1RLmFiArVwdHSj35w39y
 
-# COMMAND ----------
+# INSTALL PACKAGE---------
 
 pip install apify_client
 
-# COMMAND ----------
+
+# EXTRACT DATA: Extract Instragram accounts from storage ----------
 
 # Determine which 30 ig accounts to scrape
 target_accounts_df = spark.sql("select ownerUsername, max(timestamp) as Latest_date from step_proj.ig_posts group by ownerUsername order by Latest_date desc limit 30").toPandas()
 target_accounts = list(target_accounts_df["ownerUsername"])
 
-# COMMAND ----------
 
 # Store the target accounts in pickle
 import pickle
@@ -21,17 +20,15 @@ pickle.dump(target_accounts, file)
 file.close()
 target_accounts
 
-# COMMAND ----------
 
-#Imports
+# IMPORTS ----------
+
 from apify_client import ApifyClient
 import pandas as pd
 import numpy as np
 
 
-# COMMAND ----------
-
-#Scrape data with API
+# RUNNING APIFY ----------
 
 # Initialize the ApifyClient with your API token
 client = ApifyClient("apify_api_Qmp8pvmvg5E1QKLbLWg5IUwz90HQvO2xWrg4")
@@ -50,19 +47,15 @@ sche_post_list = []
 for item in client.dataset(run["defaultDatasetId"]).iterate_items():
     sche_post_list.append(item)
 
-#Store scraped data nto Pandas Dataframe
+# STORE DATA: Store into Pandas datafrome----------
 sche_post_df = pd.DataFrame(sche_post_list)
-
 sche_post_df
 
-# COMMAND ----------
 
 # Define schedule time
 from pyspark.sql.functions import current_timestamp
 runtime = current_timestamp()
 
-
-# COMMAND ----------
 
 # Extract key data and convert Pandas Dataframe into Spark dataframe
 sche_post_skdf = spark.createDataFrame(sche_post_df[["id", "type", "caption", "hashtags", "url", "commentsCount", "firstComment", "latestComments", "displayUrl", "likesCount", "timestamp", "ownerFullName", "ownerUsername", "ownerId"]])
@@ -76,14 +69,12 @@ sche_post_skdf = sche_post_skdf.withColumn("scheduledDatetime", runtime)
 sche_post_skdf.write.mode('append') \
          .saveAsTable("step_proj.scheduled_ig_posts")
 
-# COMMAND ----------
 
-#Filter new posts from the scraped data 
+#Filter new posts from the scraped data
 post_skdf = spark.sql("select * from step_proj.ig_posts")
 max_ts = post_skdf.groupBy().agg({"timestamp": "max"}).collect()[0][0]
 new_post_df = sche_post_skdf.filter(sche_post_skdf.timestamp > max_ts)
 
-# COMMAND ----------
 
 # Store the new post urls in pickle
 file = open('sche_posts.pkl', 'wb')
@@ -96,8 +87,6 @@ from pyspark.sql.types import *
 new_post_df.drop('scheduledDatetime').write.mode('append') \
          .saveAsTable("step_proj.ig_posts")
 
-
-# COMMAND ----------
 
 # Store schedule log
 final_post_df = spark.sql("select * from step_proj.ig_posts")
@@ -115,3 +104,5 @@ log_df = spark.createDataFrame(data=log, schema=schema)
 log_df = log_df.withColumn("scheduleTime", runtime)
 log_df.write.mode('append') \
          .saveAsTable("step_proj.schedule_logs")
+
+# END ----------

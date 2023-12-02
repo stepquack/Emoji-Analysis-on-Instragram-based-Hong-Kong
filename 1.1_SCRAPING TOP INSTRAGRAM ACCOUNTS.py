@@ -1,19 +1,21 @@
-# Databricks notebook source
-#spark.sql("DROP TABLE IF EXISTS step_proj.ig_account_ranks")
+# PART 1: Obtain the Instagram Accounts for analysis
 
-# COMMAND ----------
+# IMPORTS ----------
 
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
-# COMMAND ----------
+# STEP 1: DATA SCRAPING for INSTRAGRAM ACCOUNT CATEGORIES (from hypeauditor.com) ----------
+# HTTP REQUESTS ----------
 
 header = {"user-agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.82 Safari/537.36'}
 url = "https://hypeauditor.com/top-instagram-all-hong-kong/"
 response = requests.get(url, headers=header)
 http_string = response.text
 html = BeautifulSoup(http_string, 'html.parser')
+
+# SCRAPING WITH BeautifulSoup ----------
 
 cat_ul = html.select_one('div.menu[data-v-4b597f91]')
 cat_lis = cat_ul.select('.menu__item[data-v-4b597f91]')
@@ -31,24 +33,19 @@ for li in cat_lis:
     categories_path.append(path_name)
     categories_link.append("https://hypeauditor.com/top-instagram-" + path_name + "-hong-kong/")
 
-#Into Dataframe
+# STORE DATA: Store into Spark datafrome----------
 cat_data = {"Category": categories, "Path": categories_path, "Link":categories_link }
 category_df = pd.DataFrame(cat_data)
 cat_df = spark.createDataFrame(category_df)
 cat_df.write.mode('overwrite') \
          .saveAsTable("step_proj.hypeauditor_ig_category")
 
-# COMMAND ----------
+# STEP 2: DATA SCRAPING for TOP INSTRAGRAM ACCOUNTS (from hypeauditor.com) ----------
+# FETCH DATA: Fetch the scraped data ----------
 
 category_df = spark.sql("select * from step_proj.hypeauditor_ig_category").toPandas()
-#category_df.createOrReplaceTempView("category_df_t1")
 
-# COMMAND ----------
-
-category_ = spark.sql("select Category from category_df_t1").toPandas()
-category_link = spark.sql("select Link from category_df_t1").toPandas()
-
-# COMMAND ----------
+# SCRAPING ----------
 
 rank_category = []
 rank = []
@@ -62,7 +59,7 @@ header = {"user-agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 
 for i, ilink in enumerate(category_df["Link"]):
     url = ilink
-    
+
     response = requests.get(url, headers=header)
     http_string = response.text
     html = BeautifulSoup(http_string, 'html.parser')
@@ -103,25 +100,12 @@ for i, ilink in enumerate(category_df["Link"]):
             country.append(None)
         print(country)
 
-#Into Dataframe
+# STORE DATA: Store into Spark datafrome----------
 rank_data = {"Category": rank_category, "Rank": rank, "Influencer":account_name, "Account_ID": account_id, "Followers": followers, "Country": country}
 rank_pddf = pd.DataFrame(rank_data)
 
-    
-
-#rank_data = list(zip(rank_category, rank, account_name, account_id, followers, country, account_link))
-#rank_df = spark.createDataFrame(rank_data, ["Category", "Rank", "Influencer", "Account_ID", "Followers", "Country", "Link"])
-
-# COMMAND ----------
-
-rank_pddf
-
-# COMMAND ----------
-
-#drop null: row 0
-#rank_pddf.drop([0], inplace=True)
-
-#convert K and M
+# STEP 3: FEATURE ENGINEERING ----------
+# CONVERTING UNITS: K and M
 def convert(follower):
     if follower is None:
         pass
@@ -133,17 +117,16 @@ def convert(follower):
         return float(follower)
 rank_pddf["Followers_num"] = rank_pddf["Followers"].apply(convert)
 
-
-# COMMAND ----------
+# DATA TYPE CONVERTION ----------
 
 rank_skdf = spark.createDataFrame(rank_pddf)
 
 from pyspark.sql.types import IntegerType
 rank_skdf = rank_skdf.withColumn("Rank",rank_skdf.Rank.cast(IntegerType()))
 
+# STORE DATA ----------
+
 rank_skdf.write.mode('overwrite') \
          .saveAsTable("step_proj.ig_account_rank")
 
-# COMMAND ----------
-
-
+# END----------

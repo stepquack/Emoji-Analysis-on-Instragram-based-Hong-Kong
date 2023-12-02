@@ -1,32 +1,24 @@
-# Databricks notebook source
-#zooapple: apify_api_IUDxKMl1wfXqdWvfSSY4iZXu87LtTO16X1tv
-#twoplustep: apify_api_Qmp8pvmvg5E1QKLbLWg5IUwz90HQvO2xWrg4
+# STEP 1: SET UP FOR APIFY
+# Eg. TOKEN: apify_api_A2eOR8RxdmfQsNgH1RLmFiArVwdHSj35w39y
 
-# COMMAND ----------
+# INSTALL PACKAGE---------
 
 pip install apify_client
 
-# COMMAND ----------
 
-#Imports
+# IMPORTS ----------
 from apify_client import ApifyClient
 import pandas as pd
 import numpy as np
 
-# COMMAND ----------
-
-#Get new posts
+# EXTRACT DATA: Extract Instragram posts from previous scheduled task  ----------
 import pickle
 file = open('sche_posts.pkl', 'rb')
 new_posts = pickle.load(file)
 file.close()
 new_posts
 
-# COMMAND ----------
-
-new_posts.clear()
-
-# COMMAND ----------
+# If error occurred in the previous scheduled task, stop the current task ----------
 
 if len(new_posts) == 0:
     dbutils.notebook.exit("Aborting as ondition not met. Further tasks will be skipped")
@@ -38,9 +30,7 @@ else:
 exist_cm_count = spark.sql("select * from step_proj.ig_comment").count()
 exist_cm_count
 
-# COMMAND ----------
-
-#Scrape data with API
+# RUNNING APIFY ----------
 
 # Initialize the ApifyClient with your API token
 client = ApifyClient("apify_api_Qmp8pvmvg5E1QKLbLWg5IUwz90HQvO2xWrg4")
@@ -61,33 +51,31 @@ for item in client.dataset(run["defaultDatasetId"]).iterate_items():
 
 comment_df = pd.DataFrame(comment_list)
 
-# COMMAND ----------
+
+# If error occurred in the API scraping task, stop the current task ----------
 
 if len(comment_df) == 0:
     dbutils.notebook.exit("Aborting as ondition not met. Further tasks will be skipped")
 else:
     pass
 
-# COMMAND ----------
 
 # Define schedule time
 from pyspark.sql.functions import current_timestamp
 runtime = current_timestamp()
 
-# COMMAND ----------
 
+# Extract key data and convert Pandas Dataframe into Spark dataframe
 comment_skdf = spark.createDataFrame(comment_df[["postUrl", "id", "text", "ownerUsername", "timestamp", "likesCount"]])
 from pyspark.sql.types import *
 comment_skdf = comment_skdf.withColumn("timestamp",comment_skdf.timestamp.cast(TimestampType()))
 comment_skdf.write.mode('append') \
          .saveAsTable("step_proj.scheduled_ig_comment")
 
-# COMMAND ----------
-
+# Store scraped data to Hive
 comment_skdf.write.mode('append') \
          .saveAsTable("step_proj.ig_comment")
 
-# COMMAND ----------
 
 # Store schedule log
 final_cm_count = spark.sql("select * from step_proj.ig_comment").count()
@@ -105,3 +93,6 @@ log_df = spark.createDataFrame(data=log, schema=schema)
 log_df = log_df.withColumn("scheduleTime", runtime)
 log_df.write.mode('append') \
          .saveAsTable("step_proj.schedule_logs")
+
+
+# END ----------
